@@ -51,7 +51,8 @@ object DesignEmitter {
       ) ++ firtoolOpts
     )
 
-    writeToFile(s"$filename.sv", code, "`timescale 1ns / 1ps\n", info)
+    val file = filename.stripSuffix(".sv") + ".sv"
+    writeToFile(file, code, "`timescale 1ns / 1ps\n", info)
   }
 
   private def emitFIRRTL(
@@ -61,12 +62,13 @@ object DesignEmitter {
   ): Unit = {
     val firrtl = ChiselStage.emitCHIRRTL(gen)
 
-    writeToFile(s"$filename.fir", firrtl, "", info)
+    val file = filename.stripSuffix(".fir") + ".fir"
+    writeToFile(file, firrtl, "", info)
 
     if (info) {
       println(s"[INFO] FIRRTL will be converted to MLIR by CMake/firtool")
       println(s"[INFO] For manual conversion, run:")
-      println(s"[INFO]   firtool build/$filename.fir -ir-fir -o build/$filename.mlir")
+      println(s"[INFO]   firtool build/$file -ir-fir -o build/${filename.stripSuffix(".fir")}.mlir")
     }
   }
 
@@ -78,8 +80,8 @@ object DesignEmitter {
     options: Seq[String]
   ): Unit = {
     val firrtl     = ChiselStage.emitCHIRRTL(gen)
-    val firrtlFile = s"build/$filename.fir"
-    val mlirFile   = s"build/$filename.mlir"
+    val firrtlFile = s"build/" + filename.stripSuffix(".mlir") + ".fir"
+    val mlirFile   = s"build/" + filename.stripSuffix(".mlir") + ".mlir"
 
     val buildDir = new File("build")
     if (!buildDir.exists()) buildDir.mkdirs()
@@ -123,7 +125,7 @@ object DesignEmitter {
       val _ = firtoolCmd.!!
 
       if (info) {
-        println(s"[INFO] MLIR emitted to build/$filename.mlir")
+        println(s"[INFO] MLIR emitted to $mlirFile")
 
         val mlirContent = scala.io.Source.fromFile(mlirFile).mkString
         val numLines    = mlirContent.split("\n").length
@@ -170,22 +172,4 @@ object DesignEmitter {
       println("...")
     }
   }
-}
-
-object VerilogEmitter {
-  def parse(
-    gen: => chisel3.Module,
-    filename: String,
-    info: Boolean = true,
-    lowering: Boolean = false,
-    options: Seq[String] = Seq()
-  ): Unit =
-    DesignEmitter.emit(
-      gen = gen,
-      filename = filename.stripSuffix(".sv"),
-      target = SystemVerilog,
-      info = info,
-      lowering = lowering,
-      options = options
-    )
 }
